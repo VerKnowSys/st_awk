@@ -12,17 +12,27 @@ class st_awkCommand(sublime_plugin.TextCommand):
 
         out = ''
         try:
+            # Encode content to bytes for subprocess input
+            content_bytes = content.encode('utf-8')
             p = Popen(['awk', expr], stdout=PIPE, stdin=PIPE, stderr=PIPE)
-            out, err = p.communicate(input=content)
+            out_bytes, err_bytes = p.communicate(input=content_bytes)
+            
+            # Decode bytes back to strings
+            out = out_bytes.decode('utf-8')
+            err = err_bytes.decode('utf-8')
+            
             if err != '':
                 sublime.error_message('Error when run awk: \n' + err)
                 return
-        except Exception as e:
+        except OSError as e:
             sublime.error_message('''Error when run command awk: %s, errno: %d.\nawk is required on $PATH''' 
                 % (e.strerror, e.errno))
             return
+        except UnicodeDecodeError as e:
+            sublime.error_message('Error decoding awk output. Output may contain non-UTF-8 characters.')
+            return
         except UnicodeEncodeError as e:
-            sublime.error_message('''Error in document encode''')
+            sublime.error_message('Error encoding document content. Document may contain non-UTF-8 characters.')
             return
 
         if inplace:
